@@ -1,0 +1,635 @@
+<title>Fraud Detection — Project Walkthrough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+
+<style>
+  /* ── Tokens ── */
+  :root {
+    --bg:          #0D1117;
+    --surface:     #161B22;
+    --surface-2:   #21262D;
+    --border:      #30363D;
+    --text:        #E6EDF3;
+    --muted:       #8B949E;
+    --accent:      #388BFD;
+    --accent-dim:  rgba(56,139,253,.12);
+    --fraud:       #F85149;
+    --fraud-dim:   rgba(248,81,73,.12);
+    --ok:          #3FB950;
+    --ok-dim:      rgba(63,185,80,.12);
+    --warn:        #E3B341;
+    --warn-dim:    rgba(227,179,65,.12);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:         #F6F8FA;
+      --surface:    #FFFFFF;
+      --surface-2:  #F0F2F5;
+      --border:     #D0D7DE;
+      --text:       #1F2328;
+      --muted:      #656D76;
+      --accent:     #0969DA;
+      --accent-dim: rgba(9,105,218,.10);
+      --fraud:      #CF222E;
+      --fraud-dim:  rgba(207,34,46,.10);
+      --ok:         #1A7F37;
+      --ok-dim:     rgba(26,127,55,.10);
+      --warn:       #9A6700;
+      --warn-dim:   rgba(154,103,0,.10);
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg:         #F6F8FA;
+    --surface:    #FFFFFF;
+    --surface-2:  #F0F2F5;
+    --border:     #D0D7DE;
+    --text:       #1F2328;
+    --muted:      #656D76;
+    --accent:     #0969DA;
+    --accent-dim: rgba(9,105,218,.10);
+    --fraud:      #CF222E;
+    --fraud-dim:  rgba(207,34,46,.10);
+    --ok:         #1A7F37;
+    --ok-dim:     rgba(26,127,55,.10);
+    --warn:       #9A6700;
+    --warn-dim:   rgba(154,103,0,.10);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { font-size: 15px; scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.7;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Top bar ── */
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: var(--fraud-dim);
+    color: var(--fraud);
+    border: 1px solid var(--fraud);
+  }
+  .badge.ok  { background: var(--ok-dim);  color: var(--ok);  border-color: var(--ok); }
+  header h1 { font-size: 15px; font-weight: 600; color: var(--text); }
+  header .sub { font-size: 12px; color: var(--muted); margin-left: auto; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Sidebar ── */
+  nav {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0 28px;
+  }
+  nav .nav-section {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 16px 20px 6px;
+  }
+  nav a {
+    display: block;
+    padding: 6px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  nav a:hover { color: var(--text); background: var(--accent-dim); border-left-color: var(--accent); }
+
+  /* ── Main ── */
+  main {
+    padding: 48px 56px 80px;
+    max-width: 860px;
+  }
+
+  /* ── Section ── */
+  section { margin-bottom: 60px; }
+  section:target > h2 { color: var(--accent); }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-wrap: balance;
+  }
+  h2 .step {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: .04em;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 24px 0 8px;
+    letter-spacing: .01em;
+  }
+
+  p { margin-bottom: 14px; color: var(--text); font-size: 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--surface-2);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Callout ── */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-dim);
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 16px 0;
+    font-size: 13.5px;
+  }
+  .callout.warn { border-color: var(--warn); background: var(--warn-dim); }
+  .callout.fraud { border-color: var(--fraud); background: var(--fraud-dim); }
+  .callout.ok   { border-color: var(--ok);   background: var(--ok-dim); }
+  .callout strong { font-weight: 600; }
+
+  /* ── Metric table ── */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 20px 0;
+  }
+  .metric-cell {
+    background: var(--surface);
+    padding: 16px 14px;
+  }
+  .metric-cell .model-name {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .metric-cell .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 20px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .metric-cell .val.best { color: var(--ok); }
+  .metric-cell .label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .metric-cell.winner { background: var(--ok-dim); }
+
+  /* ── Comparison table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 20px 0;
+  }
+  th {
+    background: var(--surface-2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr.best-row td { background: var(--ok-dim); }
+  tr.best-row td:first-child { border-left: 3px solid var(--ok); }
+  .up   { color: var(--ok); }
+  .down { color: var(--fraud); }
+  td.model-col { font-family: 'Inter', sans-serif; font-weight: 500; font-size: 13px; color: var(--text); }
+
+  /* ── Decision cards ── */
+  .decision {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin: 14px 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 14px;
+  }
+  .decision .icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: var(--surface-2);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .decision h4 { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; }
+  .decision p  { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* ── Interview Q&A ── */
+  .qa { margin: 16px 0; }
+  .qa .q {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--accent);
+    padding: 10px 14px;
+    background: var(--accent-dim);
+    border-radius: 6px 6px 0 0;
+    border: 1px solid var(--accent);
+    border-bottom: none;
+  }
+  .qa .a {
+    font-size: 13.5px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 6px 6px;
+    color: var(--text);
+    line-height: 1.65;
+  }
+
+  /* ── Pipeline diagram (SVG inline) ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 24px 0;
+    overflow-x: auto;
+  }
+  .pipe-node {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 90px;
+  }
+  .pipe-node .sub { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: 'JetBrains Mono', monospace; }
+  .pipe-node.accent { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+  .pipe-node.ok     { border-color: var(--ok);    background: var(--ok-dim);    color: var(--ok); }
+  .pipe-arrow {
+    flex-shrink: 0;
+    color: var(--border);
+    font-size: 18px;
+    padding: 0 6px;
+    user-select: none;
+  }
+
+  /* ── Scrollable table wrapper ── */
+  .tbl-wrap { overflow-x: auto; }
+
+  @media (max-width: 700px) {
+    body { grid-template-columns: 1fr; }
+    nav  { display: none; }
+    main { padding: 28px 20px 60px; }
+    .metric-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<header>
+  <span class="badge">🔍 FRAUD</span>
+  <h1>Credit Card Fraud Detection — Project Walkthrough</h1>
+  <span class="sub">284,807 transactions · 4 models · XGBoost winner</span>
+</header>
+
+<nav>
+  <div class="nav-section">Project</div>
+  <a href="#problem">The Problem</a>
+  <a href="#eda">EDA Findings</a>
+
+  <div class="nav-section">Pipeline</div>
+  <a href="#split">Train/Test Split</a>
+  <a href="#scale">Scaling</a>
+  <a href="#smote">SMOTE</a>
+
+  <div class="nav-section">Modelling</div>
+  <a href="#models">Models</a>
+  <a href="#metrics">Why PR-AUC?</a>
+  <a href="#results">Results</a>
+
+  <div class="nav-section">Explainability</div>
+  <a href="#shap">SHAP</a>
+
+  <div class="nav-section">Interview Prep</div>
+  <a href="#qa">Q&A</a>
+</nav>
+
+<main>
+
+  <!-- ── Problem ── -->
+  <section id="problem">
+    <h2><span class="step">01</span> The Problem</h2>
+    <p>You have 284,807 credit card transactions and need to flag the 492 that are fraudulent — without being told which features mean what, because Visa anonymised them into PCA components V1–V28 for privacy.</p>
+    <p>The challenge isn't the algorithm. It's the imbalance. Fraud makes up <strong>0.17%</strong> of all transactions. A model that labels everything as "legitimate" scores 99.83% accuracy. That model is completely useless — it misses every single fraud case. Almost every decision in this project is a direct response to that one fact.</p>
+    <div class="callout fraud">
+      <strong>The core tension:</strong> Banks care far more about catching fraud (recall) than about false alarms (precision). Missing a real fraud case can cost thousands; flagging a legitimate transaction annoys the customer. Your models have to balance this — and the metric you pick determines what "balance" means.
+    </div>
+  </section>
+
+  <!-- ── EDA ── -->
+  <section id="eda">
+    <h2><span class="step">02</span> EDA Findings</h2>
+
+    <div class="decision">
+      <div class="icon">🔢</div>
+      <div>
+        <h4>No missing values</h4>
+        <p>All 31 columns across 284,807 rows are fully populated. No imputation strategy needed — simplifies the pipeline significantly.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">⚠️</div>
+      <div>
+        <h4>1,081 duplicate rows — but not blindly dropped</h4>
+        <p>Before removing duplicates, we checked the class split: 1,062 were legitimate, 19 were fraud. Fraud cases were already rare (492 total), so losing 19 more (~3.9%) was worth noting explicitly. We dropped them anyway — they're almost certainly data-collection artifacts — but the check itself is worth mentioning in interviews.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">📊</div>
+      <div>
+        <h4>Amount is heavily right-skewed</h4>
+        <p>Mean transaction is $88, median is $22, max is $25,691. The distribution has a very long tail. For scale-sensitive models (Logistic Regression, distance-based), this needs fixing. We applied <code>log1p(Amount)</code> to compress the tail and make the feature more Gaussian-like.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">🕐</div>
+      <div>
+        <h4>Time re-engineered as hour-of-day</h4>
+        <p>The raw <code>Time</code> column is seconds since the first transaction — a monotonically increasing counter with no predictive meaning on its own. We converted it to <code>hour_of_day = (Time / 3600) % 24</code> to capture the natural daily cycle of legitimate vs. fraudulent activity patterns.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Split ── -->
+  <section id="split">
+    <h2><span class="step">03</span> Train / Test Split</h2>
+    <p>The split happens <em>first</em>, before scaling and before SMOTE. This is the most important sequencing decision in the whole pipeline. Get it wrong and the model appears to work brilliantly — then fails in production.</p>
+
+    <div class="pipeline">
+      <div class="pipe-node accent">Raw Data<div class="sub">283,726 rows</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">Split<div class="sub">stratified 80/20</div></div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">Train<div class="sub">226,980 rows</div></div>
+      <div class="pipe-arrow">+</div>
+      <div class="pipe-node ok">Test<div class="sub">56,746 rows</div></div>
+    </div>
+
+    <h3>Why stratified?</h3>
+    <p>A random split of 283,726 rows with only 473 fraud cases could put all the fraud in the training set by bad luck. Stratified split guarantees the fraud rate is preserved in both halves: the training set gets 378 fraud cases, the test set gets 95.</p>
+
+    <div class="callout warn">
+      <strong>Data leakage trap:</strong> If you scale first (on the whole dataset) and then split, your scaler has "seen" the test set's distribution when computing the mean and standard deviation. The test set is no longer truly unseen. Same problem with SMOTE — if you oversample before splitting, synthetic fraud examples generated from test-set fraud transactions leak into the training data. Always split first.
+    </div>
+  </section>
+
+  <!-- ── Scale ── -->
+  <section id="scale">
+    <h2><span class="step">04</span> Scaling</h2>
+    <p>We applied <code>StandardScaler</code> — zero mean, unit variance — to all features. The scaler is <strong>fit only on the training set</strong>, then used to transform both train and test.</p>
+    <p>V1–V28 are already PCA-transformed and reasonably well-scaled, but <code>log_amount</code> and <code>hour_of_day</code> are on completely different scales. Without scaling, a Logistic Regression model would weigh a unit change in V1 the same as a unit change in Amount, which can be hundreds of dollars. Tree models (Random Forest, XGBoost) are scale-invariant, so scaling doesn't change their performance — but it doesn't hurt either, and it keeps the pipeline consistent.</p>
+  </section>
+
+  <!-- ── SMOTE ── -->
+  <section id="smote">
+    <h2><span class="step">05</span> Handling Imbalance — SMOTE</h2>
+    <p>SMOTE (Synthetic Minority Over-sampling Technique) generates synthetic fraud examples by interpolating between real ones in feature space. Instead of just duplicating existing fraud cases, it creates new ones that lie along the line segments connecting nearby fraud transactions.</p>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Split</th><th>Class 0 (Legit)</th><th>Class 1 (Fraud)</th><th>Ratio</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="model-col">Before SMOTE</td><td>226,602</td><td>378</td><td class="down">600:1</td></tr>
+          <tr class="best-row"><td class="model-col">After SMOTE</td><td>226,602</td><td>226,602</td><td class="up">1:1</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <strong>Why SMOTE on train only?</strong> SMOTE artificially inflates the minority class. If you applied it before splitting, synthetic fraud transactions would end up in the test set — and you'd be evaluating your model on made-up data, not real fraud. The test set must reflect the real world: 0.17% fraud.
+    </div>
+
+    <h3>Why not just use class_weight="balanced"?</h3>
+    <p>Class weights are simpler — they tell the model to penalise fraud misses more heavily during training. We actually use both: SMOTE for the data itself, and XGBoost's <code>scale_pos_weight</code> as an additional signal. For Logistic Regression and Random Forest, class weighting alone can work well. SMOTE gives the model more real-looking fraud examples to learn from, which helps tree models find better decision boundaries.</p>
+  </section>
+
+  <!-- ── Models ── -->
+  <section id="models">
+    <h2><span class="step">06</span> Model Choices</h2>
+
+    <div class="decision">
+      <div class="icon">📏</div>
+      <div>
+        <h4>Logistic Regression — the baseline</h4>
+        <p>Every serious ML project starts with a linear baseline. If a more complex model can't beat logistic regression, either the features aren't powerful enough or the complex model is misconfigured. LR also gives you probability outputs and is highly interpretable — you can read the coefficients directly.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">🌲</div>
+      <div>
+        <h4>Random Forest — ensemble of decisions</h4>
+        <p>Builds 200 decision trees on random subsets of data and features, then averages their predictions. More robust than a single tree, handles non-linear relationships, and is naturally resistant to overfitting. Also scale-invariant — no need to worry about the scaling step affecting it.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">⚡</div>
+      <div>
+        <h4>XGBoost — sequential boosting</h4>
+        <p>Rather than building trees in parallel like RF, XGBoost builds them sequentially — each new tree focuses on correcting the errors of all previous ones. It's typically stronger at finding subtle patterns in structured/tabular data. We set <code>scale_pos_weight</code> to the legit/fraud ratio as an additional imbalance correction.</p>
+      </div>
+    </div>
+
+    <div class="decision">
+      <div class="icon">💡</div>
+      <div>
+        <h4>LightGBM — leaf-wise boosting</h4>
+        <p>Similar philosophy to XGBoost but grows trees leaf-wise (deepening the most impactful leaf) rather than level-wise. Usually faster and sometimes more accurate. Good sanity check against XGBoost — if they agree, you can be confident in the result.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Metrics ── -->
+  <section id="metrics">
+    <h2><span class="step">07</span> Why PR-AUC, not Accuracy?</h2>
+
+    <p>With 0.17% fraud, accuracy is meaningless. A model predicting "legitimate" every single time scores 99.83% accuracy while catching <strong>zero fraud cases</strong>. We need metrics that tell us what's actually happening with the minority class.</p>
+
+    <h3>Precision-Recall AUC (PR-AUC)</h3>
+    <p><strong>Precision</strong> = of everything flagged as fraud, how many were actually fraud? <strong>Recall</strong> = of all actual fraud cases, how many did we catch? The PR curve shows the tradeoff between these two as you move the classification threshold. PR-AUC (also called Average Precision) summarises the whole curve in one number — <strong>it is the primary metric for this project</strong>, because it focuses entirely on the minority class.</p>
+
+    <h3>Why not ROC-AUC alone?</h3>
+    <p>ROC-AUC looks at true positive rate vs. false positive rate. With so many legitimate transactions, even a weak model has a low false positive rate — making ROC-AUC look artificially high (all four models score 0.97+) even when performance on fraud cases is poor. PR-AUC is the harder, more honest metric for imbalanced data.</p>
+
+    <h3>F1 Score</h3>
+    <p>The harmonic mean of precision and recall at the default 0.5 threshold. Useful, but threshold-dependent. PR-AUC gives the full picture across all thresholds.</p>
+  </section>
+
+  <!-- ── Results ── -->
+  <section id="results">
+    <h2><span class="step">08</span> Results</h2>
+
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Model</th><th>PR-AUC ↑</th><th>ROC-AUC</th><th>F1</th><th>Precision (fraud)</th><th>Recall (fraud)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="model-col">Logistic Regression</td>
+            <td>0.6820</td><td>0.9596</td><td class="down">0.098</td><td class="down">0.05</td><td class="up">0.87</td>
+          </tr>
+          <tr>
+            <td class="model-col">Random Forest</td>
+            <td>0.7862</td><td class="up">0.9792</td><td class="up">0.754</td><td>0.72</td><td>0.79</td>
+          </tr>
+          <tr class="best-row">
+            <td class="model-col">⚡ XGBoost</td>
+            <td class="up">0.8123</td><td>0.9736</td><td>0.687</td><td>0.59</td><td>0.82</td>
+          </tr>
+          <tr>
+            <td class="model-col">LightGBM</td>
+            <td>0.7939</td><td>0.9719</td><td>0.658</td><td>0.56</td><td>0.79</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout ok">
+      <strong>Winner: XGBoost</strong> with PR-AUC 0.8123 — the best at balancing precision and recall across all thresholds. It catches 82% of fraud cases (recall) while flagging a legitimate transaction roughly 41% of the time it raises an alarm (precision 0.59). In a real bank this threshold would be tuned — a fraud team can review more false positives if it means catching more real fraud.
+    </div>
+
+    <h3>Logistic Regression anomaly — why such low F1?</h3>
+    <p>LR scores F1 of 0.098 despite recall of 0.87. It catches most fraud but floods the alerts with false positives (precision 0.05 — only 1 in 20 flagged transactions is actually fraud). That's what happens when a linear model meets highly non-linear fraud patterns after SMOTE has made the training set 50/50: it lowers the decision boundary so aggressively that it flags almost anything. The PR-AUC of 0.68 still reflects reasonable performance when you move the threshold — but at the default 0.5 cutoff it's impractical.</p>
+  </section>
+
+  <!-- ── SHAP ── -->
+  <section id="shap">
+    <h2><span class="step">09</span> SHAP Explainability</h2>
+
+    <p>SHAP (SHapley Additive exPlanations) tells you <em>why</em> the model made a specific prediction — not just what it predicted. It assigns each feature a score (SHAP value) that represents how much that feature pushed the probability toward fraud or toward legitimate, for that specific transaction.</p>
+
+    <h3>TreeExplainer</h3>
+    <p>For tree-based models like XGBoost, SHAP uses TreeExplainer — an exact algorithm that's far faster than brute-force Shapley computation. For a single transaction, it walks every tree and tracks how each split changed the prediction, then attributes the change to the features involved.</p>
+
+    <h3>Reading the summary plot</h3>
+    <p>Each row is a feature. Each dot is one transaction. Position left/right shows whether the SHAP value pushed toward legitimate (left) or fraud (right). Color shows the actual feature value — red = high, blue = low. A feature like V14 where <em>low values are red and push right</em> tells you: transactions with unusually low V14 are much more likely to be flagged as fraud.</p>
+
+    <h3>Reading the waterfall plot</h3>
+    <p>This shows a single transaction's explanation. Start at the baseline (the model's average prediction across all transactions). Each bar adds or subtracts from that baseline. Red bars push the prediction toward fraud; blue bars push it toward legitimate. The final prediction is the sum of all those pushes. This is what makes the Streamlit demo useful — every transaction gets a personalised explanation.</p>
+
+    <div class="callout">
+      <strong>Interview line:</strong> "I used SHAP because accuracy metrics alone don't tell you whether the model is learning the right things. A model that scores well but relies on noise or spurious correlations will fail in production. SHAP lets me verify that the model is flagging fraud for interpretable, defensible reasons."
+    </div>
+  </section>
+
+  <!-- ── Q&A ── -->
+  <section id="qa">
+    <h2><span class="step">10</span> Interview Q&amp;A</h2>
+
+    <div class="qa">
+      <div class="q">Q: Why did you use SMOTE instead of just class_weight="balanced"?</div>
+      <div class="a">Both address imbalance, but differently. Class weights penalise the model more for getting fraud wrong during training — it's cheap and often good enough. SMOTE synthetically generates new fraud examples so the model sees more diverse fraud patterns to learn from. We used SMOTE because it tends to produce better decision boundaries for tree models; with Logistic Regression, class weights often suffice. The key point: whichever you choose, apply it <em>after</em> splitting, on the training set only.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q: Why is PR-AUC your primary metric and not ROC-AUC?</div>
+      <div class="a">ROC-AUC measures the tradeoff between true positive rate and false positive rate. With 99.83% legitimate transactions, even a weak model has a very low false positive rate — making ROC-AUC look great when it isn't. PR-AUC focuses entirely on the minority class (fraud), asking: across all thresholds, how well does the model balance catching real fraud vs. raising false alarms? In imbalanced classification, PR-AUC is the honest metric.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q: What is data leakage and how did you prevent it?</div>
+      <div class="a">Data leakage is when information from the test set influences model training, making evaluation unrealistically optimistic. I prevented it by: (1) splitting before scaling — the StandardScaler is fit only on training data; (2) applying SMOTE only to the training set — no synthetic examples in the test set; (3) never looking at the test set to make any modeling decisions. The test set is touched exactly once: final evaluation.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q: XGBoost won on PR-AUC but Random Forest has a higher F1 — which would you deploy?</div>
+      <div class="a">It depends on the operational cost of false positives vs. false negatives. Random Forest has higher F1 at the 0.5 threshold (0.754 vs. 0.687) — meaning fewer false alarms per caught fraud case at that specific cutoff. XGBoost has better PR-AUC (0.812 vs. 0.786) — meaning it has more flexibility across all thresholds. If a fraud analyst reviews every flag, I'd tune XGBoost's threshold to match the analyst's review capacity rather than use the default 0.5. PR-AUC is a better guide for threshold-tunable deployments.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q: What would you do to improve this model further?</div>
+      <div class="a">Several directions: (1) Feature engineering on the PCA components — while we can't interpret V1–V28 directly, we could create interaction terms or polynomial features. (2) Threshold optimisation — choose the operating point on the PR curve that matches the actual cost ratio of false positives to false negatives in the business. (3) Ensemble stacking — combine XGBoost and Random Forest predictions. (4) Temporal validation — since this is transaction data, a time-based split (train on earlier months, test on later) is more realistic than a random split. (5) Anomaly detection as a second layer — flagging statistical outliers alongside the classifier.</div>
+    </div>
+
+    <div class="qa">
+      <div class="q">Q: What do the SHAP values tell you about what the model learned?</div>
+      <div class="a">The SHAP summary shows V14, V4, V12, and V17 as the most influential features — these PCA components likely encode patterns the original Visa feature team identified as fraud-relevant when constructing the PCA space. That's reassuring: the model isn't latching onto noise or Amount alone. The waterfall plot for individual transactions shows whether a specific transaction was flagged because of unusual V14 values, unusually high amount, or a combination — giving an auditable reason for each decision rather than a black-box score.</div>
+    </div>
+  </section>
+
+</main>

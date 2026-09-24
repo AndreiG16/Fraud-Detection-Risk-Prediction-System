@@ -1,0 +1,17 @@
+# Dataset — too large for GitHub (150MB)
+creditcard.csv
+
+# Trained models — regenerate with pipeline.py
+output/best_model.pkl
+output/scaler.pkl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# macOS
+.DS_Store
